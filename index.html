@@ -85,63 +85,168 @@ body{background:#08080a;color:#fff;min-height:100vh;padding:16px}
 </div>
 <div class="toast" id="toast"></div>
 
-<script>
-const KEY='alankaboot_data_v1';
-let DATA={categories:[],channels:[]};
-const $=id=>document.getElementById(id);
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import { getDatabase, ref, push, set, remove, onValue, update }
+  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-function load(){try{const d=localStorage.getItem(KEY);DATA=d?JSON.parse(d):{categories:[],channels:[]};}catch(e){DATA={categories:[],channels:[]};}}
-function save(){localStorage.setItem(KEY,JSON.stringify(DATA));}
+const firebaseConfig = {
+  apiKey: "AIzaSyAUc2C9hG9VE7RECiW19QXjNZqVH96sFE",
+  authDomain: "zezo-59a8d.firebaseapp.com",
+  databaseURL: "https://zezo-59a8d-default-rtdb.firebaseio.com",
+  projectId: "zezo-59a8d",
+  storageBucket: "zezo-59a8d.firebasestorage.app",
+  messagingSenderId: "49183098248",
+  appId: "1:49183098248:web:37e3fb16744042a1bb263d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+let DATA = { categories: {}, channels: {} };
+const $ = id => document.getElementById(id);
+
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
-function render(){renderCats();renderCatSelect();renderChs();}
+
+// تحميل البيانات من Firebase
+onValue(ref(db, '/'), (snap) => {
+  const val = snap.val();
+  DATA = {
+    categories: val && val.categories ? val.categories : {},
+    channels: val && val.channels ? val.channels : {}
+  };
+  render();
+});
+
+function render(){ renderCats(); renderCatSelect(); renderChs(); }
 
 function renderCats(){
-  const c=$('catsList');
-  if(!DATA.categories.length){c.innerHTML='<p style="color:#666;font-size:12px;text-align:center;padding:10px">لا توجد أقسام</p>';return;}
-  c.innerHTML=DATA.categories.map((cat,i)=>`
-    <div class="li">
-      <div class="info"><div class="txt"><div class="nm">${cat.name}</div><div class="sb">${DATA.channels.filter(x=>x.categoryId===cat.id).length} قناة</div></div></div>
-      <div class="act"><button class="ed" onclick="editCat(${i})">تعديل</button><button class="dl" onclick="delCat(${i})">حذف</button></div>
-    </div>`).join('');
-}
-function renderCatSelect(){
-  const s=$('chCat');
-  if(!DATA.categories.length){s.innerHTML='<option value="">-- أضف قسماً أولاً --</option>';return;}
-  s.innerHTML=DATA.categories.map(c=>`<option value="${c.id}">${c.name}</option>`).join('');
-}
-function saveCat(){
-  const name=$('catName').value.trim(), id=$('catEditId').value;
-  if(!name){toast('اكتب اسم القسم');return;}
-  if(id){const i=DATA.categories.findIndex(c=>c.id===id);if(i>=0)DATA.categories[i].name=name;toast('تم التعديل');}
-  else{DATA.categories.push({id:'cat_'+Date.now(),name});toast('تمت الإضافة');}
-  save();clearCat();render();
-}
-function editCat(i){const c=DATA.categories[i];$('catName').value=c.name;$('catEditId').value=c.id;$('catTitle').textContent='✏️ تعديل القسم';$('catBtn').textContent='💾 حفظ التعديلات';$('catCancel').style.display='block';window.scrollTo({top:0,behavior:'smooth'});}
-function delCat(i){const c=DATA.categories[i];if(!confirm(`حذف "${c.name}" وكل قنواته؟`))return;DATA.channels=DATA.channels.filter(x=>x.categoryId!==c.id);DATA.categories.splice(i,1);save();render();toast('تم الحذف');}
-function clearCat(){$('catName').value='';$('catEditId').value='';$('catTitle').textContent='➕ إضافة قسم جديد';$('catBtn').textContent='💾 حفظ القسم';$('catCancel').style.display='none';}
-
-function renderChs(){
-  const c=$('chList');
-  if(!DATA.channels.length){c.innerHTML='<p style="color:#666;font-size:12px;text-align:center;padding:10px">لا توجد قنوات</p>';return;}
-  c.innerHTML=DATA.channels.map((ch,i)=>{
-    const cat=DATA.categories.find(x=>x.id===ch.categoryId);
-    return `<div class="li"><div class="info"><img src="${ch.logo||'https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'}" onerror="this.src='https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'"><div class="txt"><div class="nm">${ch.name} ${ch.status==='live'?'<span style="color:#dc1420;font-size:10px">● مباشر</span>':''}</div><div class="sb">${cat?cat.name:'بدون قسم'}</div></div></div><div class="act"><button class="ed" onclick="editCh(${i})">تعديل</button><button class="dl" onclick="delCh(${i})">حذف</button></div></div>`;
+  const c = $('catsList');
+  const list = Object.entries(DATA.categories).map(([id, v]) => ({id, ...v}));
+  if(!list.length){ c.innerHTML = '<p style="color:#666;font-size:12px;text-align:center;padding:10px">لا توجد أقسام</p>'; return; }
+  c.innerHTML = list.map(cat => {
+    const count = Object.values(DATA.channels).filter(x => x.categoryId === cat.id).length;
+    return `<div class="li">
+      <div class="info"><div class="txt"><div class="nm">${cat.name}</div><div class="sb">${count} قناة</div></div></div>
+      <div class="act"><button class="ed" onclick="editCat('${cat.id}')">تعديل</button><button class="dl" onclick="delCat('${cat.id}')">حذف</button></div>
+    </div>`;
   }).join('');
 }
-function saveCh(){
-  const name=$('chName').value.trim(), categoryId=$('chCat').value, logo=$('chLogo').value.trim(), url=$('chUrl').value.trim(), status=$('chStatus').value, id=$('chEditId').value;
-  if(!name||!url){toast('املأ الاسم والرابط');return;}
-  if(!categoryId){toast('اختر القسم');return;}
-  if(id){const i=DATA.channels.findIndex(c=>c.id===id);if(i>=0)DATA.channels[i]={...DATA.channels[i],name,categoryId,logo,url,status};toast('تم التعديل');}
-  else{DATA.channels.push({id:'ch_'+Date.now(),name,categoryId,logo,url,status});toast('تمت الإضافة');}
-  save();clearCh();render();
-}
-function editCh(i){const ch=DATA.channels[i];$('chName').value=ch.name;$('chCat').value=ch.categoryId;$('chLogo').value=ch.logo||'';$('chUrl').value=ch.url;$('chStatus').value=ch.status;$('chEditId').value=ch.id;$('chTitle').textContent='✏️ تعديل القناة';$('chBtn').textContent='💾 حفظ التعديلات';$('chCancel').style.display='block';window.scrollTo({top:0,behavior:'smooth'});}
-function delCh(i){if(!confirm('حذف القناة؟'))return;DATA.channels.splice(i,1);save();render();toast('تم الحذف');}
-function clearCh(){$('chName').value='';$('chLogo').value='';$('chUrl').value='';$('chStatus').value='live';$('chEditId').value='';$('chTitle').textContent='➕ إضافة قناة جديدة';$('chBtn').textContent='💾 حفظ القناة';$('chCancel').style.display='none';}
 
-load();render();
-window.addEventListener('storage',e=>{if(e.key===KEY){load();render();}});
+function renderCatSelect(){
+  const s = $('chCat');
+  const list = Object.entries(DATA.categories).map(([id, v]) => ({id, ...v}));
+  if(!list.length){ s.innerHTML = '<option value="">-- أضف قسماً أولاً --</option>'; return; }
+  s.innerHTML = list.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+}
+
+function renderChs(){
+  const c = $('chList');
+  const list = Object.entries(DATA.channels).map(([id, v]) => ({id, ...v}));
+  if(!list.length){ c.innerHTML = '<p style="color:#666;font-size:12px;text-align:center;padding:10px">لا توجد قنوات</p>'; return; }
+  c.innerHTML = list.map(ch => {
+    const cat = DATA.categories[ch.categoryId];
+    return `<div class="li">
+      <div class="info">
+        <img src="${ch.logo || 'https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'}" onerror="this.src='https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'">
+        <div class="txt"><div class="nm">${ch.name} ${ch.status==='live'?'<span style="color:#dc1420;font-size:10px">● مباشر</span>':''}</div><div class="sb">${cat?cat.name:'بدون قسم'}</div></div>
+      </div>
+      <div class="act"><button class="ed" onclick="editCh('${ch.id}')">تعديل</button><button class="dl" onclick="delCh('${ch.id}')">حذف</button></div>
+    </div>`;
+  }).join('');
+}
+
+window.saveCat = async function(){
+  const name = $('catName').value.trim();
+  const id = $('catEditId').value;
+  if(!name){ toast('اكتب اسم القسم'); return; }
+  if(id){
+    await update(ref(db, 'categories/' + id), { name });
+    toast('تم التعديل');
+  } else {
+    const newRef = push(ref(db, 'categories'));
+    await set(newRef, { name });
+    toast('تمت الإضافة');
+  }
+  clearCat(); render();
+};
+
+window.editCat = function(id){
+  const c = DATA.categories[id];
+  if(!c) return;
+  $('catName').value = c.name;
+  $('catEditId').value = id;
+  $('catTitle').textContent = '✏️ تعديل القسم';
+  $('catBtn').textContent = '💾 حفظ التعديلات';
+  $('catCancel').style.display = 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+};
+
+window.delCat = async function(id){
+  const c = DATA.categories[id];
+  if(!c || !confirm(`حذف "${c.name}" وكل قنواته؟`)) return;
+  const toDelete = Object.entries(DATA.channels).filter(([k,v]) => v.categoryId === id).map(([k]) => k);
+  for(const k of toDelete) await remove(ref(db, 'channels/' + k));
+  await remove(ref(db, 'categories/' + id));
+  toast('تم الحذف');
+};
+
+window.clearCat = function(){
+  $('catName').value = ''; $('catEditId').value = '';
+  $('catTitle').textContent = '➕ إضافة قسم جديد';
+  $('catBtn').textContent = '💾 حفظ القسم';
+  $('catCancel').style.display = 'none';
+};
+
+window.saveCh = async function(){
+  const name = $('chName').value.trim();
+  const categoryId = $('chCat').value;
+  const logo = $('chLogo').value.trim();
+  const url = $('chUrl').value.trim();
+  const status = $('chStatus').value;
+  const id = $('chEditId').value;
+  if(!name || !url){ toast('املأ الاسم والرابط'); return; }
+  if(!categoryId){ toast('اختر القسم'); return; }
+  if(id){
+    await update(ref(db, 'channels/' + id), { name, categoryId, logo, url, status });
+    toast('تم التعديل');
+  } else {
+    const newRef = push(ref(db, 'channels'));
+    await set(newRef, { name, categoryId, logo, url, status });
+    toast('تمت الإضافة');
+  }
+  clearCh(); render();
+};
+
+window.editCh = function(id){
+  const ch = DATA.channels[id];
+  if(!ch) return;
+  $('chName').value = ch.name;
+  $('chCat').value = ch.categoryId;
+  $('chLogo').value = ch.logo || '';
+  $('chUrl').value = ch.url;
+  $('chStatus').value = ch.status;
+  $('chEditId').value = id;
+  $('chTitle').textContent = '✏️ تعديل القناة';
+  $('chBtn').textContent = '💾 حفظ التعديلات';
+  $('chCancel').style.display = 'block';
+  window.scrollTo({top:0,behavior:'smooth'});
+};
+
+window.delCh = async function(id){
+  if(!confirm('حذف القناة؟')) return;
+  await remove(ref(db, 'channels/' + id));
+  toast('تم الحذف');
+};
+
+window.clearCh = function(){
+  $('chName').value = ''; $('chLogo').value = ''; $('chUrl').value = '';
+  $('chStatus').value = 'live'; $('chEditId').value = '';
+  $('chTitle').textContent = '➕ إضافة قناة جديدة';
+  $('chBtn').textContent = '💾 حفظ القناة';
+  $('chCancel').style.display = 'none';
+};
 </script>
 </body>
 </html>
