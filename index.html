@@ -40,28 +40,34 @@ body{background:#08080a;color:#fff;min-height:100vh;padding:16px}
     <a href="index.html" target="_blank">فتح التطبيق ←</a>
   </div>
 
+  <!-- 1. إدارة الأقسام -->
   <div class="card">
     <h2 id="catTitle">➕ إضافة قسم جديد</h2>
     <input type="hidden" id="catEditId">
     <div class="fg">
       <label>اسم القسم</label>
-      <input type="text" id="catName" placeholder="مثال: الرياضة، الأفلام">
+      <input type="text" id="catName" placeholder="مثال: beIN sports، الرياضة، الأفلام">
+    </div>
+    <div class="fg">
+      <label>صورة القسم (تظهر في الواجهة الرئيسية)</label>
+      <input type="text" id="catImg" placeholder="https://..." dir="ltr">
     </div>
     <button class="btn" onclick="saveCat()" id="catBtn">💾 حفظ القسم</button>
     <button class="btn btn-gray" onclick="clearCat()" id="catCancel">إلغاء التعديل</button>
     <div id="catsList" style="margin-top:16px"></div>
   </div>
 
+  <!-- 2. إدارة القنوات (داخل قسم) -->
   <div class="card">
-    <h2 id="chTitle">➕ إضافة قناة جديدة</h2>
+    <h2 id="chTitle">➕ إضافة قناة جديدة داخل قسم</h2>
     <input type="hidden" id="chEditId">
-    <div class="fg">
-      <label>اسم القناة</label>
-      <input type="text" id="chName" placeholder="مثال: beIN Sports 1">
-    </div>
     <div class="fg">
       <label>القسم التابع له</label>
       <select id="chCat"></select>
+    </div>
+    <div class="fg">
+      <label>اسم القناة</label>
+      <input type="text" id="chName" placeholder="مثال: beIN Sports 1">
     </div>
     <div class="fg">
       <label>رابط الصورة (Logo)</label>
@@ -85,7 +91,6 @@ body{background:#08080a;color:#fff;min-height:100vh;padding:16px}
 </div>
 <div class="toast" id="toast"></div>
 
-<!-- Firebase SDK -->
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getDatabase, ref, push, set, remove, onValue, update }
@@ -104,18 +109,14 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 
-let DATA = { categories: {}, channels: {} };
+let DATA = { categories: {} };
 const $ = id => document.getElementById(id);
 
 function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
 
-// تحميل البيانات من Firebase
-onValue(ref(db, '/'), (snap) => {
-  const val = snap.val();
-  DATA = {
-    categories: val && val.categories ? val.categories : {},
-    channels: val && val.channels ? val.channels : {}
-  };
+// تحميل البيانات
+onValue(ref(db, 'categories'), (snap) => {
+  DATA.categories = snap.val() || {};
   render();
 });
 
@@ -126,9 +127,12 @@ function renderCats(){
   const list = Object.entries(DATA.categories).map(([id, v]) => ({id, ...v}));
   if(!list.length){ c.innerHTML = '<p style="color:#666;font-size:12px;text-align:center;padding:10px">لا توجد أقسام</p>'; return; }
   c.innerHTML = list.map(cat => {
-    const count = Object.values(DATA.channels).filter(x => x.categoryId === cat.id).length;
+    const count = cat.channels ? Object.keys(cat.channels).length : 0;
     return `<div class="li">
-      <div class="info"><div class="txt"><div class="nm">${cat.name}</div><div class="sb">${count} قناة</div></div></div>
+      <div class="info">
+        <img src="${cat.image || 'https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'}" onerror="this.src='https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'">
+        <div class="txt"><div class="nm">${cat.name}</div><div class="sb">${count} قناة</div></div>
+      </div>
       <div class="act"><button class="ed" onclick="editCat('${cat.id}')">تعديل</button><button class="dl" onclick="delCat('${cat.id}')">حذف</button></div>
     </div>`;
   }).join('');
@@ -143,30 +147,36 @@ function renderCatSelect(){
 
 function renderChs(){
   const c = $('chList');
-  const list = Object.entries(DATA.channels).map(([id, v]) => ({id, ...v}));
-  if(!list.length){ c.innerHTML = '<p style="color:#666;font-size:12px;text-align:center;padding:10px">لا توجد قنوات</p>'; return; }
-  c.innerHTML = list.map(ch => {
-    const cat = DATA.categories[ch.categoryId];
-    return `<div class="li">
-      <div class="info">
-        <img src="${ch.logo || 'https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'}" onerror="this.src='https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'">
-        <div class="txt"><div class="nm">${ch.name} ${ch.status==='live'?'<span style="color:#dc1420;font-size:10px">● مباشر</span>':''}</div><div class="sb">${cat?cat.name:'بدون قسم'}</div></div>
-      </div>
-      <div class="act"><button class="ed" onclick="editCh('${ch.id}')">تعديل</button><button class="dl" onclick="delCh('${ch.id}')">حذف</button></div>
-    </div>`;
-  }).join('');
+  let html = '';
+  Object.entries(DATA.categories).forEach(([catId, cat]) => {
+    if(cat.channels && Object.keys(cat.channels).length > 0){
+      html += `<h4 style="color:#dc1420;font-size:12px;margin:10px 0 5px">${cat.name}</h4>`;
+      html += Object.entries(cat.channels).map(([chId, ch]) => `
+        <div class="li">
+          <div class="info">
+            <img src="${ch.logo || 'https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'}" onerror="this.src='https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'">
+            <div class="txt"><div class="nm">${ch.name} ${ch.status==='live'?'<span style="color:#dc1420;font-size:10px">● مباشر</span>':''}</div></div>
+          </div>
+          <div class="act"><button class="ed" onclick="editCh('${catId}','${chId}')">تعديل</button><button class="dl" onclick="delCh('${catId}','${chId}')">حذف</button></div>
+        </div>`).join('');
+    }
+  });
+  if(!html) html = '<p style="color:#666;font-size:12px;text-align:center;padding:10px">لا توجد قنوات</p>';
+  c.innerHTML = html;
 }
 
+// حفظ القسم
 window.saveCat = async function(){
   const name = $('catName').value.trim();
+  const image = $('catImg').value.trim();
   const id = $('catEditId').value;
   if(!name){ toast('اكتب اسم القسم'); return; }
   if(id){
-    await update(ref(db, 'categories/' + id), { name });
+    await update(ref(db, 'categories/' + id), { name, image });
     toast('تم التعديل');
   } else {
     const newRef = push(ref(db, 'categories'));
-    await set(newRef, { name });
+    await set(newRef, { name, image, channels: {} });
     toast('تمت الإضافة');
   }
   clearCat(); render();
@@ -176,6 +186,7 @@ window.editCat = function(id){
   const c = DATA.categories[id];
   if(!c) return;
   $('catName').value = c.name;
+  $('catImg').value = c.image || '';
   $('catEditId').value = id;
   $('catTitle').textContent = '✏️ تعديل القسم';
   $('catBtn').textContent = '💾 حفظ التعديلات';
@@ -186,22 +197,21 @@ window.editCat = function(id){
 window.delCat = async function(id){
   const c = DATA.categories[id];
   if(!c || !confirm(`حذف "${c.name}" وكل قنواته؟`)) return;
-  const toDelete = Object.entries(DATA.channels).filter(([k,v]) => v.categoryId === id).map(([k]) => k);
-  for(const k of toDelete) await remove(ref(db, 'channels/' + k));
   await remove(ref(db, 'categories/' + id));
   toast('تم الحذف');
 };
 
 window.clearCat = function(){
-  $('catName').value = ''; $('catEditId').value = '';
+  $('catName').value = ''; $('catImg').value = ''; $('catEditId').value = '';
   $('catTitle').textContent = '➕ إضافة قسم جديد';
   $('catBtn').textContent = '💾 حفظ القسم';
   $('catCancel').style.display = 'none';
 };
 
+// حفظ القناة داخل القسم
 window.saveCh = async function(){
-  const name = $('chName').value.trim();
   const categoryId = $('chCat').value;
+  const name = $('chName').value.trim();
   const logo = $('chLogo').value.trim();
   const url = $('chUrl').value.trim();
   const status = $('chStatus').value;
@@ -209,41 +219,41 @@ window.saveCh = async function(){
   if(!name || !url){ toast('املأ الاسم والرابط'); return; }
   if(!categoryId){ toast('اختر القسم'); return; }
   if(id){
-    await update(ref(db, 'channels/' + id), { name, categoryId, logo, url, status });
+    await update(ref(db, 'categories/' + categoryId + '/channels/' + id), { name, logo, url, status });
     toast('تم التعديل');
   } else {
-    const newRef = push(ref(db, 'channels'));
-    await set(newRef, { name, categoryId, logo, url, status });
+    const newRef = push(ref(db, 'categories/' + categoryId + '/channels'));
+    await set(newRef, { name, logo, url, status });
     toast('تمت الإضافة');
   }
   clearCh(); render();
 };
 
-window.editCh = function(id){
-  const ch = DATA.channels[id];
+window.editCh = function(catId, chId){
+  const ch = DATA.categories[catId].channels[chId];
   if(!ch) return;
+  $('chCat').value = catId;
   $('chName').value = ch.name;
-  $('chCat').value = ch.categoryId;
   $('chLogo').value = ch.logo || '';
   $('chUrl').value = ch.url;
   $('chStatus').value = ch.status;
-  $('chEditId').value = id;
+  $('chEditId').value = chId;
   $('chTitle').textContent = '✏️ تعديل القناة';
   $('chBtn').textContent = '💾 حفظ التعديلات';
   $('chCancel').style.display = 'block';
   window.scrollTo({top:0,behavior:'smooth'});
 };
 
-window.delCh = async function(id){
+window.delCh = async function(catId, chId){
   if(!confirm('حذف القناة؟')) return;
-  await remove(ref(db, 'channels/' + id));
+  await remove(ref(db, 'categories/' + catId + '/channels/' + chId));
   toast('تم الحذف');
 };
 
 window.clearCh = function(){
   $('chName').value = ''; $('chLogo').value = ''; $('chUrl').value = '';
   $('chStatus').value = 'live'; $('chEditId').value = '';
-  $('chTitle').textContent = '➕ إضافة قناة جديدة';
+  $('chTitle').textContent = '➕ إضافة قناة جديدة داخل قسم';
   $('chBtn').textContent = '💾 حفظ القناة';
   $('chCancel').style.display = 'none';
 };
