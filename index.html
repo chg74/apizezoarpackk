@@ -2,407 +2,267 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>لوحة التحكم - Alankaboot Sport</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>العنكبوت سبورت | Alankaboot Sport</title>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mpegts.js@1.7.3/dist/mpegts.min.js"></script>
 <style>
-  *{box-sizing:border-box;font-family:'Cairo',sans-serif;margin:0;padding:0}
-  body{background:linear-gradient(135deg,#050907 0%,#081a12 50%,#050907 100%);
-       background-size:400% 400%;animation:bgMove 20s ease infinite;
-       color:#fff;padding:16px;min-height:100vh}
-  @keyframes bgMove{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
-  h1{text-align:center;color:#fff;font-size:21px;font-weight:900;margin-bottom:6px;letter-spacing:1.5px}
-  .sub{text-align:center;color:#5a7a70;font-size:12px;margin-bottom:16px}
-  .conn{text-align:center;font-size:12px;padding:10px;border-radius:10px;
-        background:rgba(0,0,0,.4);margin-bottom:14px;font-weight:700}
-  .conn.online{color:#00dc82;border:1px solid rgba(0,220,130,.5)}
-  .conn.offline{color:#e53935;border:1px solid rgba(229,57,53,.5)}
-  .conn.saving{color:#ffd700;border:1px solid rgba(255,215,0,.5)}
-  .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
-  .stat-card{background:linear-gradient(135deg,rgba(6,26,16,.9),rgba(10,35,22,.9));
-    padding:14px 8px;border-radius:14px;border:1px solid rgba(0,220,130,.3);text-align:center}
-  .stat-card .num{font-size:26px;font-weight:900;color:#00dc82}
-  .stat-card .lbl{font-size:10px;color:#8fa8a0;margin-top:4px;font-weight:600}
-  .top-actions{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-  .top-actions button{flex:1;min-width:120px}
-  .section{background:linear-gradient(135deg,rgba(6,26,16,.9),rgba(10,35,22,.9));
-    border-radius:14px;padding:16px;margin-bottom:16px;border:1px solid rgba(0,220,130,.25)}
-  .section h2{color:#fff;margin:0 0 14px;font-size:16px;display:flex;align-items:center;gap:8px;font-weight:800}
-  .section h2::before{content:'';width:4px;height:18px;border-radius:4px;
-                      background:linear-gradient(180deg,#006b3c,#00dc82)}
-  .btn{background:linear-gradient(135deg,#006b3c,#00dc82);color:#fff;border:none;
-       padding:10px 16px;border-radius:10px;font-weight:700;cursor:pointer;font-size:13px;
-       font-family:'Cairo',sans-serif;transition:.22s;display:inline-flex;align-items:center;gap:6px}
-  .btn:active{transform:scale(.97)}
-  .btn.play{background:linear-gradient(135deg,#2e7d32,#4caf50)}
-  .btn.stop{background:linear-gradient(135deg,#c62828,#e53935)}
-  .btn.danger{background:linear-gradient(135deg,#5a0000,#8b0000)}
-  .btn.ghost{background:transparent;color:#00dc82;border:1px solid rgba(0,220,130,.5)}
-  .btn.tok{background:linear-gradient(135deg,#1565c0,#1e88e5)}
-  .btn.sm{padding:7px 12px;font-size:12px}
-  .btn.add-big{width:100%;padding:14px;font-size:14px;justify-content:center}
-  .cat-card{background:rgba(5,15,10,.7);padding:14px;border-radius:12px;margin-bottom:14px;
-    border:1px solid rgba(0,220,130,.2);border-right:4px solid #00dc82}
-  .cat-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap}
-  .cat-head .cat-title{color:#fff;font-weight:900;font-size:15px;display:flex;align-items:center;gap:10px}
-  .cat-head .cat-logo-sm{width:40px;height:40px;border-radius:8px;background:#050907;padding:4px;object-fit:contain;border:1px solid rgba(0,220,130,.3)}
-  .cat-head .actions{display:flex;gap:6px;flex-wrap:wrap}
-  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
-  .field-row.full{grid-template-columns:1fr}
-  .field-row label{display:block;font-size:11px;color:#8fa8a0;margin-bottom:5px;font-weight:600}
-  .field-row input{width:100%;background:#050907;border:1px solid rgba(0,220,130,.3);
-    color:#fff;padding:10px;border-radius:8px;font-size:13px;font-family:'Cairo',sans-serif}
-  .field-row input:focus{outline:none;border-color:#00dc82}
-  .field-row input[type="url"]{direction:ltr;font-size:12px}
-  .channels-list{margin-top:12px;display:flex;flex-direction:column;gap:10px}
-  .channel-item{background:rgba(0,0,0,.4);padding:12px;border-radius:10px;
-    border-right:3px solid #1e88e5}
-  .channel-item.live{border-right-color:#4caf50;background:rgba(20,50,30,.4)}
-  .channel-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:8px;flex-wrap:wrap}
-  .channel-head .name{color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;gap:8px}
-  .channel-head .ch-logo-sm{width:32px;height:32px;border-radius:6px;background:#050907;padding:3px;object-fit:contain;border:1px solid rgba(0,220,130,.2)}
-  .badge{padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700}
-  .badge.live{background:linear-gradient(135deg,#2e7d32,#4caf50)}
-  .badge.off{background:#333;color:#999}
-  .badge.tok{background:linear-gradient(135deg,#1565c0,#1e88e5)}
-  .token-box{background:rgba(30,136,229,.1);border:1px solid rgba(30,136,229,.35);
-    padding:8px;border-radius:8px;font-size:11px;color:#64b5f6;word-break:break-all;
-    margin-top:8px;direction:ltr;text-align:left;font-family:monospace}
-  .ch-actions{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-  .status{padding:10px;border-radius:8px;font-size:12px;margin-top:10px;text-align:center;
-    font-weight:700;display:none}
-  .status.ok{background:rgba(76,175,80,.15);color:#4caf50;border:1px solid rgba(76,175,80,.5);display:block}
-  .status.err{background:rgba(229,57,53,.15);color:#e53935;border:1px solid rgba(229,57,53,.5);display:block}
-  .status.info{background:rgba(30,136,229,.15);color:#1e88e5;border:1px solid rgba(30,136,229,.5);display:block}
-  #loading{position:fixed;inset:0;background:#050907;z-index:9999;display:flex;
-    flex-direction:column;justify-content:center;align-items:center;gap:20px;transition:opacity .5s}
-  #loading.hide{opacity:0;pointer-events:none}
-  .spinner{width:50px;height:50px;border:3px solid rgba(0,220,130,.2);
-    border-top-color:#00dc82;border-radius:50%;animation:spin 1s linear infinite}
-  @keyframes spin{to{transform:rotate(360deg)}}
-  .save-indicator{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
-    background:linear-gradient(90deg,#006b3c,#00dc82);color:#fff;padding:10px 24px;
-    border-radius:26px;font-weight:700;font-size:13px;opacity:0;transition:.3s;
-    pointer-events:none;z-index:99999}
-  .save-indicator.show{opacity:1;bottom:30px}
-  .info-box{background:rgba(30,136,229,.1);border:1px solid rgba(30,136,229,.3);
-    padding:12px;border-radius:10px;font-size:12px;color:#64b5f6;margin-bottom:12px;line-height:1.7;font-weight:600}
-  .empty-msg{text-align:center;color:#5a7a70;padding:30px;font-size:13px;line-height:1.8}
-  @media(max-width:600px){.field-row{grid-template-columns:1fr}h1{font-size:18px}.stats{grid-template-columns:1fr 1fr 1fr}}
+*{box-sizing:border-box;font-family:'Cairo',sans-serif;margin:0;padding:0;-webkit-tap-highlight-color:transparent;user-select:none}
+html,body{background:#08080a;color:#fff;overflow-x:hidden;width:100%}
+
+#splash{position:fixed;inset:0;background:#08080a;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999;transition:opacity .8s}
+#splash.hide{opacity:0;pointer-events:none}
+.splash-logo{width:150px;height:150px;border-radius:50%;border:3px solid rgba(220,20,30,.3);padding:10px;animation:pulse 2s infinite;margin-bottom:20px;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.splash-logo img{width:100%;height:100%;object-fit:contain}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.brand{color:#fff;font-size:26px;font-weight:900;letter-spacing:2px;background:linear-gradient(90deg,#fff,#dc1420,#fff);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-size:200% 100%;animation:shine 3s linear infinite}
+@keyframes shine{to{background-position:200% 0}}
+.loader{width:38px;height:38px;border:3px solid rgba(220,20,30,.2);border-top:3px solid #dc1420;border-radius:50%;animation:spin 1s linear infinite;margin-top:18px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+#app{display:none;opacity:0;transition:opacity .5s;min-height:100vh;padding:16px;padding-bottom:80px}
+#app.show{display:block;opacity:1}
+.hdr{display:flex;justify-content:space-between;align-items:center;padding:12px 0;margin-bottom:12px}
+.hdr h1{font-size:22px;font-weight:900}
+.hdr h1 span{color:#dc1420}
+.hdr .logo{width:40px;height:40px;border-radius:50%;border:2px solid rgba(220,20,30,.4);padding:2px;background:#fff}
+
+.cats{display:flex;gap:8px;overflow-x:auto;padding-bottom:10px;margin-bottom:14px;scrollbar-width:none}
+.cats::-webkit-scrollbar{display:none}
+.cat{padding:9px 18px;background:#121216;border:1px solid rgba(255,255,255,.06);border-radius:30px;color:#888;font-weight:700;font-size:13px;cursor:pointer;white-space:nowrap;font-family:'Cairo',sans-serif}
+.cat.active{background:linear-gradient(90deg,#8b0000,#dc1420);color:#fff;border-color:transparent}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+.card{background:#121216;border:1px solid rgba(255,255,255,.05);border-radius:16px;padding:12px;text-align:center;cursor:pointer;transition:.3s}
+.card:active{transform:scale(.97);border-color:#dc1420}
+.card .box{width:70px;height:70px;margin:0 auto 10px;border-radius:12px;overflow:hidden;background:#fff;display:flex;align-items:center;justify-content:center;padding:4px}
+.card .box img{width:100%;height:100%;object-fit:contain}
+.card .nm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .st{font-size:10px;color:#666;margin-top:4px}
+.card .st.live{color:#dc1420;font-weight:700}
+.card .st.live::before{content:'● ';animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.3}}
+
+.nav{position:fixed;bottom:0;left:0;right:0;background:#121216;border-top:1px solid rgba(255,255,255,.05);display:flex;justify-content:space-around;padding:10px 0;z-index:100}
+.nav-it{display:flex;flex-direction:column;align-items:center;color:#666;font-size:11px;font-weight:600;gap:4px}
+.nav-it.active{color:#dc1420}
+.nav-it svg{width:22px;height:22px;fill:currentColor}
+
+/* شاشة المشاهدة - بدون ملء شاشة إجباري */
+#player{display:none;position:fixed;inset:0;background:#000;z-index:99999;flex-direction:column}
+#player.show{display:flex}
+.p-cont{flex:1;display:flex;justify-content:center;align-items:center;background:#000;position:relative;overflow:hidden}
+.p-wrap{position:relative;width:100%;height:100%;display:flex;justify-content:center;align-items:center;background:#000}
+.p-wrap video{width:100%;height:100%;object-fit:contain;background:#000}
+.back{position:absolute;top:20px;left:20px;z-index:100;background:rgba(220,20,30,.9);color:#fff;border:none;padding:10px 18px;border-radius:10px;font-family:'Cairo',sans-serif;font-weight:700;font-size:13px;cursor:pointer}
+.logo-ov{position:absolute;top:20px;right:20px;z-index:100;width:60px;height:60px;border-radius:50%;overflow:hidden;border:2px solid rgba(220,20,30,.5);background:#fff;padding:3px}
+.logo-ov img{width:100%;height:100%;object-fit:contain}
+.ctrls{position:absolute;bottom:0;left:0;right:0;z-index:100;display:flex;align-items:center;gap:10px;padding:14px 18px;background:linear-gradient(transparent,rgba(0,0,0,.9));opacity:1;transition:.3s}
+.ctrls.hidden{opacity:0;pointer-events:none}
+.cbtn{background:rgba(220,20,30,.25);color:#fff;border:1px solid rgba(220,20,30,.5);width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;flex-shrink:0}
+.cbtn svg{width:20px;height:20px;fill:#fff}
+.bar{flex:1;height:5px;background:rgba(255,255,255,.2);border-radius:5px;cursor:pointer;position:relative}
+.bar .fill{height:100%;width:0;background:linear-gradient(90deg,#8b0000,#dc1420);border-radius:5px}
+.tm{color:#fff;font-size:11px;font-weight:600;min-width:70px;text-align:center}
+
+@media(max-width:600px){
+  .grid{grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:10px}
+  .card .box{width:60px;height:60px}
+  .card .nm{font-size:11px}
+  .hdr h1{font-size:18px}
+  .logo-ov{width:50px;height:50px;top:10px;right:10px}
+  .back{top:10px;left:10px;padding:7px 12px;font-size:12px}
+  .cbtn{width:38px;height:38px}
+  .cbtn svg{width:16px;height:16px}
+}
 </style>
 </head>
 <body>
 
-<div id="loading"><div class="spinner"></div><div style="color:#00dc82;font-weight:700">جاري التحميل...</div></div>
-
-<h1>لوحة تحكم Alankaboot Sport</h1>
-<div class="sub">الأدمن فقط — الرابط الأصلي مش بيتوزع للمشاهدين</div>
-<div class="conn offline" id="connStatus">جاري الاتصال...</div>
-
-<div class="stats">
-  <div class="stat-card"><div class="num" id="viewerCount">0</div><div class="lbl">مشاهدين</div></div>
-  <div class="stat-card"><div class="num" id="liveCount">0</div><div class="lbl">بث مباشر</div></div>
-  <div class="stat-card"><div class="num" id="catCount">0</div><div class="lbl">أقسام</div></div>
+<div id="splash">
+  <div class="splash-logo"><img src="https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png"></div>
+  <div class="brand">Alankaboot Sport</div>
+  <p style="color:#666;margin-top:8px;font-size:13px">جاري التحميل...</p>
+  <div class="loader"></div>
 </div>
 
-<div class="top-actions">
-  <button class="btn ghost" onclick="reloadFromServer()">🔄 إعادة تحميل</button>
-  <button class="btn ghost" onclick="stopAll()">⏹ إيقاف الكل</button>
-  <button class="btn ghost" onclick="resetAll()">↺ مسح الكل</button>
-</div>
-
-<div class="section">
-  <h2>الأقسام والقنوات</h2>
-  <div class="info-box">
-    💡 <b>طريقة الإضافة:</b><br>
-    1️⃣ اضغط "➕ إضافة قسم" (زي beIN Sports مثلاً)<br>
-    2️⃣ جوه القسم اضغط "➕ إضافة قناة" وحط اللوجو + الرابط الأصلي m3u8<br>
-    3️⃣ اضغط <b>"▶ تشغيل"</b> (التوكن يتولّد تلقائياً)
+<div id="app">
+  <div class="hdr">
+    <h1>Alankaboot <span>Sport</span></h1>
+    <img class="logo" src="https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png">
   </div>
-  <div id="categoriesList"></div>
-  <button class="btn add-big" onclick="addCategory()">➕ إضافة قسم جديد</button>
-  <div class="status" id="statusMsg"></div>
+  <!-- شريط الأقسام -->
+  <div class="cats" id="cats"></div>
+  <!-- شبكة القنوات داخل القسم -->
+  <div class="grid" id="grid"></div>
+  <div class="nav">
+    <div class="nav-it active"><svg viewBox="0 0 24 24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg><span>الرئيسية</span></div>
+    <div class="nav-it"><svg viewBox="0 0 24 24"><path d="M18 4l2 4h-3l-2-4h-2l2 4h-3l-2-4H8l2 4H7L5 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4h-4z"/></svg><span>الأفلام</span></div>
+    <div class="nav-it"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/></svg><span>الرياضة</span></div>
+  </div>
 </div>
 
-<div class="save-indicator" id="saveIndicator">✓ تم الحفظ</div>
+<!-- شاشة المشاهدة (تفتح عند الضغط على القناة) -->
+<div id="player">
+  <div class="p-cont">
+    <div class="p-wrap" id="pWrap">
+      <video id="video" playsinline webkit-playsinline controls></video>
+      <button class="back" onclick="closeP()">← رجوع</button>
+      <div class="logo-ov"><img id="pLogo" src=""></div>
+      <div class="ctrls" id="ctrls">
+        <button class="cbtn" onclick="toggleMute()"><svg id="vi" viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/></svg></button>
+        <button class="cbtn" onclick="toggleFs()"><svg viewBox="0 0 24 24"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script>
-  const PROXY_BASE = 'https://alankaboot-proxy.kamlnot61.workers.dev';
-  const ADMIN_KEY  = 'ANKABOOT_ADMIN_2026_CHANGE_ME';
-  const BROKER = 'wss://broker.emqx.io:8084/mqtt';
-  const TOPIC_DATA = 'kwtspta_9f3a2b1c/data';
-  const TOPIC_HB   = 'kwtspta_9f3a2b1c/hb';
+const KEY='alankaboot_data_v1';
+let DATA={categories:[],channels:[]};
+let currentCat='all';
+const $=id=>document.getElementById(id);
 
-  const client = mqtt.connect(BROKER, { clientId: 'admin_'+Math.random().toString(16).slice(2,10) });
-  const connStatus = document.getElementById('connStatus');
-  const viewers = new Map();
-  let data = { categories: [] };
-  let isLoadedFromServer = false;
-  let publishTimeout = null;
+function load(){try{const d=localStorage.getItem(KEY);DATA=d?JSON.parse(d):{categories:[],channels:[]};}catch(e){DATA={categories:[],channels:[]};}}
 
-  client.on('connect', ()=>{
-    setConn('online','✅ متصل');
-    client.subscribe(TOPIC_HB);
-    client.subscribe(TOPIC_DATA);
-    setTimeout(()=>{
-      if(!isLoadedFromServer){
-        loadLocal();
-        isLoadedFromServer = true;
-        hideLoading();
-        render();
-        publishData();
-      }
-    }, 1500);
-  });
-  client.on('error', ()=>{
-    setConn('offline','❌ فشل الاتصال');
-    if(!isLoadedFromServer){ loadLocal(); isLoadedFromServer = true; hideLoading(); render(); }
-  });
-  client.on('message', (t, m)=>{
-    try{
-      if(t === TOPIC_HB){ const d = JSON.parse(m.toString()); viewers.set(d.id, Date.now()); return; }
-      if(t === TOPIC_DATA && !isLoadedFromServer){
-        const d = JSON.parse(m.toString());
-        if(d && Array.isArray(d.categories)){
-          data = d; isLoadedFromServer = true; hideLoading(); render();
+setTimeout(()=>{
+  $('splash').classList.add('hide');
+  setTimeout(()=>{
+    $('splash').style.display='none';
+    $('app').classList.add('show');
+    load();renderCats();renderGrid();
+  },700);
+},2200);
+
+function renderCats(){
+  const c=$('cats');
+  let h=`<div class="cat ${currentCat==='all'?'active':''}" onclick="pick('all')">الكل</div>`;
+  h+=DATA.categories.map(cat=>`<div class="cat ${currentCat===cat.id?'active':''}" onclick="pick('${cat.id}')">${cat.name}</div>`).join('');
+  c.innerHTML=h;
+}
+function pick(id){currentCat=id;renderCats();renderGrid();}
+
+function renderGrid(){
+  const g=$('grid');
+  let list=DATA.channels;
+  if(currentCat!=='all')list=list.filter(ch=>ch.categoryId===currentCat);
+  if(!list.length){g.innerHTML='<p style="grid-column:1/-1;text-align:center;color:#666;padding:40px">لا توجد قنوات في هذا القسم</p>';return;}
+  g.innerHTML=list.map(ch=>`
+    <div class="card" onclick="play('${ch.id}')">
+      <div class="box"><img src="${ch.logo||'https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'}" onerror="this.src='https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'"></div>
+      <div class="nm">${ch.name}</div>
+      <div class="st ${ch.status==='live'?'live':''}">${ch.status==='live'?'مباشر':'غير متاح'}</div>
+    </div>`).join('');
+}
+
+let hls=null,mpeg=null;
+
+function play(id){
+  const ch=DATA.channels.find(c=>c.id===id);
+  if(!ch)return;
+  if(ch.status!=='live'){alert('القناة غير متاحة');return;}
+  $('pLogo').src=ch.logo||'https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png';
+  $('player').classList.add('show');
+  document.body.style.overflow='hidden';
+  
+  // ❌ تم إلغاء ملء الشاشة الإجباري
+  // requestFs(); 
+
+  startStream(ch.url);
+  speak();
+}
+
+// زر ملء الشاشة الاختياري
+function toggleFs(){
+  const el=$('pWrap');
+  if(document.fullscreenElement||document.webkitFullscreenElement){
+    if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});
+    else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
+  }else{
+    if(el.requestFullscreen)el.requestFullscreen().catch(()=>{});
+    else if(el.webkitRequestFullscreen)el.webkitRequestFullscreen();
+  }
+}
+
+function startStream(url){
+  const v=$('video');
+  if(hls){hls.destroy();hls=null;}
+  if(mpeg){mpeg.destroy();mpeg=null;}
+  v.removeAttribute('src');v.load();
+
+  // تنبيه إذا كان الرابط http والتطبيق يعمل على https (مشكلة CodePen)
+  if(url.startsWith('http://') && location.protocol === 'https:'){
+    alert('⚠️ تنبيه: أنت تستخدم رابط HTTP على موقع HTTPS (مثل CodePen). المتصفح يمنع تشغيل الفيديو لهذا السبب.\n\nالحل: ارفع الملفات على استضافة تدعم HTTPS أو افتح الملف مباشرة من هاتفك.');
+  }
+
+  // إذا كان الرابط http، نمرره عبر وسيط
+  let u=url;
+  if(url.startsWith('http://')){
+    u='https://corsproxy.io/?'+encodeURIComponent(url);
+  }
+
+  if(u.includes('.m3u8')){
+    if(Hls.isSupported()){
+      hls=new Hls({lowLatencyMode:true,enableWorker:true});
+      hls.loadSource(u);hls.attachMedia(v);
+      hls.on(Hls.Events.MANIFEST_PARSED,()=>v.play().catch(()=>{}));
+      hls.on(Hls.Events.ERROR,(e,d)=>{
+        if(d.fatal){
+          if(d.type===Hls.ErrorTypes.NETWORK_ERROR)hls.startLoad();
+          else if(d.type===Hls.ErrorTypes.MEDIA_ERROR)hls.recoverMediaError();
         }
-      }
-    }catch(e){}
-  });
-
-  function setConn(s,t){ connStatus.className = 'conn '+s; connStatus.textContent = t; }
-  function loadLocal(){ try{ const s = localStorage.getItem('alk_data_v3'); if(s) data = JSON.parse(s); }catch(e){} }
-  function hideLoading(){ const l = document.getElementById('loading'); l.classList.add('hide'); setTimeout(()=>l.style.display='none',500); }
-
-  setInterval(()=>{
-    const now = Date.now();
-    for(const [id,t] of viewers){ if(now-t>15000) viewers.delete(id); }
-    document.getElementById('viewerCount').textContent = viewers.size;
-  }, 5000);
-
-  const esc = s => String(s||'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const uid = p => p + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
-
-  function render(){
-    const c = document.getElementById('categoriesList');
-    if(!data.categories.length){
-      c.innerHTML = '<div class="empty-msg">لا توجد أقسام. اضغط "➕ إضافة قسم جديد" للبدء.</div>';
-      updateStats();
-      return;
-    }
-
-    c.innerHTML = data.categories.map((cat, ci)=>{
-      const chs = cat.channels || [];
-      const chsHtml = chs.map((ch, chi)=>{
-        const hasTok = !!ch.streamToken;
-        return `
-          <div class="channel-item ${ch.live?'live':''}">
-            <div class="channel-head">
-              <span class="name">
-                ${ch.logo ? `<img class="ch-logo-sm" src="${esc(ch.logo)}" onerror="this.style.display='none'">` : ''}
-                ${esc(ch.name||'قناة '+(chi+1))}
-              </span>
-              <span style="display:flex;gap:5px;flex-wrap:wrap">
-                ${hasTok?'<span class="badge tok">🔐 توكن</span>':''}
-                ${ch.live?'<span class="badge live">● مباشر</span>':'<span class="badge off">متوقف</span>'}
-              </span>
-            </div>
-
-            <div class="field-row">
-              <div><label>اسم القناة</label>
-                <input value="${esc(ch.name||'')}" oninput="upCh(${ci},${chi},'name',this.value)" onchange="saveNow()"></div>
-              <div><label>لوجو القناة (URL)</label>
-                <input type="url" value="${esc(ch.logo||'')}" oninput="upCh(${ci},${chi},'logo',this.value)" onchange="saveNow()"></div>
-            </div>
-
-            <div class="field-row full">
-              <div><label>🔒 الرابط الأصلي m3u8 (الأدمن فقط)</label>
-                <input type="url" value="${esc(ch.originalUrl||'')}" placeholder="https://example.com/stream.m3u8"
-                  oninput="upCh(${ci},${chi},'originalUrl',this.value)" onchange="saveNow()"></div>
-            </div>
-
-            ${hasTok?`<div class="token-box">${esc(ch.streamToken)}</div>`:''}
-
-            <div class="ch-actions">
-              <button class="btn tok sm" onclick="genToken(${ci},${chi})">🔐 توليد توكن</button>
-              ${ch.live
-                ? `<button class="btn stop sm" onclick="setLive(${ci},${chi},false)">■ إيقاف</button>
-                   <button class="btn play sm" onclick="setLive(${ci},${chi},true)">🔄 إعادة تشغيل</button>`
-                : `<button class="btn play sm" onclick="setLive(${ci},${chi},true)">▶ تشغيل</button>`}
-              <button class="btn danger sm" onclick="removeChannel(${ci},${chi})">🗑 حذف</button>
-            </div>
-          </div>`;
-      }).join('');
-
-      return `
-        <div class="cat-card">
-          <div class="cat-head">
-            <div class="cat-title">
-              ${cat.logo ? `<img class="cat-logo-sm" src="${esc(cat.logo)}" onerror="this.style.display='none'">` : ''}
-              ${esc(cat.name||'قسم')}
-              <span style="color:#5a7a70;font-size:11px;font-weight:600">(${chs.length} قناة)</span>
-            </div>
-            <div class="actions">
-              <button class="btn danger sm" onclick="removeCategory(${ci})">🗑 حذف القسم</button>
-            </div>
-          </div>
-
-          <div class="field-row">
-            <div><label>اسم القسم (زي beIN Sports)</label>
-              <input value="${esc(cat.name||'')}" oninput="upCat(${ci},'name',this.value)" onchange="saveNow()"></div>
-            <div><label>لوجو القسم (URL)</label>
-              <input type="url" value="${esc(cat.logo||'')}" oninput="upCat(${ci},'logo',this.value)" onchange="saveNow()"></div>
-          </div>
-
-          <div class="channels-list">${chsHtml || '<div class="empty-msg" style="padding:14px">لا توجد قنوات في هذا القسم.</div>'}</div>
-
-          <button class="btn sm" style="margin-top:12px;width:100%;justify-content:center" onclick="addChannel(${ci})">➕ إضافة قناة في هذا القسم</button>
-        </div>`;
-    }).join('');
-
-    updateStats();
-  }
-
-  function updateStats(){
-    document.getElementById('catCount').textContent = data.categories.length;
-    let live = 0;
-    data.categories.forEach(c => (c.channels||[]).forEach(ch => { if(ch.live) live++; }));
-    document.getElementById('liveCount').textContent = live;
-  }
-
-  function upCat(ci,k,v){ data.categories[ci][k] = v; localStorage.setItem('alk_data_v3', JSON.stringify(data)); scheduleSave(); }
-  function upCh(ci,chi,k,v){ data.categories[ci].channels[chi][k] = v; localStorage.setItem('alk_data_v3', JSON.stringify(data)); scheduleSave(); }
-
-  function saveNow(){ localStorage.setItem('alk_data_v3', JSON.stringify(data)); publishData(); }
-  function scheduleSave(){ clearTimeout(publishTimeout); publishTimeout = setTimeout(saveNow, 800); }
-
-  function publishData(){
-    try{
-      setConn('saving','💾 جاري الحفظ...');
-      client.publish(TOPIC_DATA, JSON.stringify(data), { retain: true }, ()=>{
-        setConn('online','✅ متصل');
-        const s = document.getElementById('saveIndicator');
-        s.classList.add('show'); setTimeout(()=>s.classList.remove('show'), 1200);
       });
-    }catch(e){}
+    }else if(v.canPlayType('application/vnd.apple.mpegurl')){v.src=u;v.play().catch(()=>{});}
+  }else if(u.includes('.ts')){
+    if(mpegts.getFeatureList().mseLivePlayback){
+      mpeg=mpegts.createPlayer({type:'mpegts',isLive:true,url:u});
+      mpeg.attachMediaElement(v);mpeg.load();mpeg.play();
+    }else{v.src=u;v.play().catch(()=>{});}
+  }else{v.src=u;v.play().catch(()=>{});}
+}
+
+function closeP(){
+  $('player').classList.remove('show');
+  document.body.style.overflow='';
+  const v=$('video');
+  if(hls){hls.destroy();hls=null;}
+  if(mpeg){mpeg.destroy();mpeg=null;}
+  v.pause();v.removeAttribute('src');v.load();
+  if(document.fullscreenElement||document.webkitFullscreenElement){
+    if(document.exitFullscreen)document.exitFullscreen().catch(()=>{});
+    else if(document.webkitExitFullscreen)document.webkitExitFullscreen();
   }
+}
 
-  function addCategory(){
-    data.categories.push({
-      id: uid('cat_'),
-      name: 'قسم جديد',
-      logo: '',
-      channels: []
-    });
-    render(); saveNow();
-    showStatus('✓ تمت إضافة القسم', 'ok');
-  }
+const v=$('video');
+function togglePlay(){v.paused?v.play().catch(()=>{}):v.pause();}
 
-  function removeCategory(ci){
-    if(!confirm('متأكد من حذف القسم وكل قنواته؟')) return;
-    data.categories.splice(ci,1);
-    render(); saveNow();
-    showStatus('✓ تم الحذف', 'ok');
-  }
+function toggleMute(){
+  v.muted=!v.muted;
+  $('vi').innerHTML=v.muted?'<path d="M16.5 12c0-1.77-1.02-3.29-2.5-4.03v2.21l2.45 2.45c.03-.2.05-.41.05-.63zM4.27 3L3 4.27 7.73 9H3v6h4l5 5v-6.73l4.25 4.25c-.67.52-1.42.93-2.25 1.18v2.06c1.38-.31 2.63-.95 3.69-1.81L19.73 21 21 19.73l-9-9L4.27 3zM12 4L9.91 6.09 12 8.18V4z"/>':'<path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"/>';
+}
 
-  function addChannel(ci){
-    data.categories[ci].channels.push({
-      id: uid('ch_'),
-      name: 'قناة جديدة',
-      logo: '',
-      originalUrl: '',
-      streamToken: '',
-      live: false
-    });
-    render(); saveNow();
-    showStatus('✓ تمت إضافة القناة', 'ok');
-  }
+function speak(){
+  if(!('speechSynthesis' in window))return;
+  window.speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance('أهلاً بيكم في تطبيق العنكبوت سبورت. مشاهدة ممتعة.');
+  u.lang='ar-EG';u.rate=0.95;
+  const voices=window.speechSynthesis.getVoices();
+  const ar=voices.find(x=>x.lang&&x.lang.startsWith('ar'));
+  if(ar)u.voice=ar;
+  window.speechSynthesis.speak(u);
+}
+if('speechSynthesis' in window){
+  window.speechSynthesis.onvoiceschanged=()=>window.speechSynthesis.getVoices();
+  window.speechSynthesis.getVoices();
+}
 
-  function removeChannel(ci, chi){
-    if(!confirm('حذف القناة؟')) return;
-    data.categories[ci].channels.splice(chi,1);
-    render(); saveNow();
-    showStatus('✓ تم الحذف', 'ok');
-  }
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeP();});
 
-  async function genToken(ci, chi){
-    const ch = data.categories[ci].channels[chi];
-    const url = (ch.originalUrl||'').trim();
-    if(!url){ showStatus('❌ اكتب الرابط الأصلي أولاً', 'err'); return null; }
-
-    showStatus('🔐 جاري توليد التوكن...', 'info');
-    try{
-      const res = await fetch(PROXY_BASE + '/token?key=' + encodeURIComponent(ADMIN_KEY) +
-                              '&url=' + encodeURIComponent(url));
-      if(!res.ok) throw new Error('HTTP '+res.status);
-      const tok = (await res.text()).trim();
-      if(!tok || tok.length < 20) throw new Error('توكن غير صالح');
-
-      ch.streamToken = tok;
-      ch._tokenUrl = url;
-      saveNow(); render();
-      showStatus('✓ تم توليد التوكن', 'ok');
-      return tok;
-    }catch(err){
-      showStatus('❌ فشل: '+err.message, 'err');
-      return null;
-    }
-  }
-
-  async function setLive(ci, chi, status){
-    const ch = data.categories[ci].channels[chi];
-
-    if(!status){
-      ch.live = false;
-      saveNow(); render();
-      showStatus('✓ تم الإيقاف', 'ok');
-      return;
-    }
-
-    const url = (ch.originalUrl||'').trim();
-    if(!url){ showStatus('❌ اكتب الرابط الأصلي أولاً', 'err'); return; }
-
-    if(!ch.streamToken || ch._tokenUrl !== url){
-      showStatus('🔐 جاري توليد التوكن...', 'info');
-      const tok = await genToken(ci, chi);
-      if(!tok) return;
-    }
-
-    ch.live = true;
-    saveNow(); render();
-    showStatus('✓ تم التشغيل — يظهر الآن للمستخدمين', 'ok');
-  }
-
-  function stopAll(){
-    if(!confirm('إيقاف كل القنوات؟')) return;
-    data.categories.forEach(c => (c.channels||[]).forEach(ch => ch.live = false));
-    saveNow(); render();
-    showStatus('✓ تم إيقاف الكل', 'ok');
-  }
-
-  function showStatus(msg, type){
-    const s = document.getElementById('statusMsg');
-    s.textContent = msg; s.className = 'status ' + type;
-    setTimeout(()=>{ s.className = 'status'; }, 4000);
-  }
-
-  function reloadFromServer(){
-    if(!confirm('إعادة تحميل من السيرفر؟')) return;
-    localStorage.removeItem('alk_data_v3');
-    location.reload();
-  }
-
-  function resetAll(){
-    if(!confirm('مسح كل الأقسام والقنوات؟')) return;
-    data = { categories: [] };
-    saveNow(); render();
-    showStatus('✓ تم المسح', 'ok');
-  }
-
-  window.addEventListener('beforeunload', ()=>{
-    try{ client.publish(TOPIC_DATA, JSON.stringify(data), { retain: true }); }catch(e){}
-  });
+// تحديث تلقائي عند إضافة قنوات جديدة من الأدمن
+window.addEventListener('storage',e=>{if(e.key===KEY){load();renderCats();renderGrid();}});
+setInterval(()=>{load();renderCats();renderGrid();},5000);
 </script>
 </body>
 </html>
