@@ -3,260 +3,752 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>لوحة أدمن العنكبوت سبورت</title>
+
+<title>Alankaboot Sport - Admin</title>
+
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
 <style>
-*{box-sizing:border-box;font-family:'Cairo',sans-serif;margin:0;padding:0}
-body{background:#08080a;color:#fff;min-height:100vh;padding:16px}
-.container{max-width:800px;margin:0 auto}
-.header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#121216;border-radius:16px;border:1px solid rgba(220,20,30,.2);margin-bottom:16px}
-.header h1{font-size:16px;color:#dc1420;font-weight:900}
-.header a{color:#fff;text-decoration:none;background:#dc1420;padding:8px 14px;border-radius:8px;font-weight:700;font-size:12px}
-.card{background:#121216;border-radius:16px;padding:20px;border:1px solid rgba(255,255,255,.05);margin-bottom:16px}
-.card h2{font-size:15px;color:#ccc;margin-bottom:14px;border-bottom:1px solid rgba(220,20,30,.2);padding-bottom:10px}
-.fg{margin-bottom:12px}
-.fg label{display:block;font-size:13px;color:#aaa;margin-bottom:6px;font-weight:600}
-.fg input,.fg select{width:100%;padding:11px 14px;background:#0a0a0c;border:1px solid rgba(255,255,255,.1);border-radius:10px;color:#fff;font-family:'Cairo',sans-serif;font-size:14px;outline:none}
-.fg input:focus,.fg select:focus{border-color:#dc1420}
-.btn{width:100%;padding:13px;background:linear-gradient(90deg,#8b0000,#dc1420);color:#fff;border:none;border-radius:10px;font-weight:700;font-size:15px;cursor:pointer;font-family:'Cairo',sans-serif;margin-top:6px}
-.btn-gray{background:#333;margin-top:8px;display:none}
-.li{display:flex;justify-content:space-between;align-items:center;padding:11px;background:#0a0a0c;border-radius:10px;margin-bottom:8px;border:1px solid rgba(255,255,255,.05)}
-.li .info{flex:1;display:flex;align-items:center;gap:10px;min-width:0}
-.li .info img{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#fff;padding:3px}
-.li .info .txt{flex:1;min-width:0}
-.li .info .nm{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.li .info .sb{font-size:11px;color:#666}
-.li .act{display:flex;gap:5px}
-.li .act button{padding:7px 11px;border:none;border-radius:6px;cursor:pointer;font-family:'Cairo',sans-serif;font-weight:600;font-size:11px;color:#fff}
-.ed{background:#2196F3}.dl{background:#dc1420}
-.toast{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:linear-gradient(90deg,#8b0000,#dc1420);color:#fff;padding:12px 26px;border-radius:30px;font-weight:700;font-size:14px;opacity:0;transition:.3s;pointer-events:none;z-index:99}
-.toast.show{opacity:1;bottom:40px}
+*{
+  box-sizing:border-box;
+  margin:0;
+  padding:0;
+  font-family:Cairo,sans-serif;
+}
+
+body{
+  background:#080304;
+  color:#fff;
+  min-height:100vh;
+  padding:20px;
+}
+
+.container{
+  width:100%;
+  max-width:900px;
+  margin:auto;
+}
+
+.header{
+  background:linear-gradient(145deg,#200507,#100304);
+  border:1px solid #5c1016;
+  border-radius:18px;
+  padding:20px;
+  margin-bottom:20px;
+}
+
+.header h1{
+  color:#ff4757;
+  font-size:22px;
+}
+
+.header p{
+  color:#aaa;
+  font-size:12px;
+  margin-top:5px;
+}
+
+.card{
+  background:linear-gradient(145deg,#1d0608,#100304);
+  border:1px solid #4c0c12;
+  border-radius:18px;
+  padding:20px;
+  margin-bottom:20px;
+}
+
+.card h2{
+  font-size:16px;
+  margin-bottom:15px;
+}
+
+input,select{
+  width:100%;
+  padding:13px;
+  margin-bottom:12px;
+  background:#080304;
+  border:1px solid #4c0c12;
+  border-radius:10px;
+  color:#fff;
+  outline:none;
+}
+
+button{
+  border:0;
+  padding:12px 20px;
+  border-radius:10px;
+  background:linear-gradient(90deg,#8b0000,#dc1420);
+  color:#fff;
+  font-weight:800;
+  cursor:pointer;
+}
+
+button.delete{
+  background:#31070a;
+  color:#ff6873;
+}
+
+.status{
+  margin-top:10px;
+  font-size:12px;
+  color:#aaa;
+}
+
+.list{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:12px;
+}
+
+.item{
+  background:#100304;
+  border:1px solid #3e0a0f;
+  border-radius:14px;
+  padding:12px;
+}
+
+.item img{
+  width:70px;
+  height:70px;
+  border-radius:12px;
+  object-fit:contain;
+  background:#050202;
+  display:block;
+  margin-bottom:10px;
+}
+
+.item strong{
+  display:block;
+  margin-bottom:10px;
+}
+
+.item small{
+  color:#999;
+  display:block;
+  margin-bottom:10px;
+  word-break:break-all;
+}
 </style>
 </head>
+
 <body>
+
 <div class="container">
+
   <div class="header">
-    <h1>⚙️ لوحة تحكم العنكبوت</h1>
-    <a href="index.html" target="_blank">فتح التطبيق ←</a>
+    <h1>🕷️ Alankaboot Sport - لوحة الأدمن</h1>
+    <p>إدارة القوائم والقنوات وروابط البث</p>
   </div>
 
-  <!-- 1. إدارة الأقسام -->
+
+  <!-- إنشاء قائمة -->
+
   <div class="card">
-    <h2 id="catTitle">➕ إضافة قسم جديد</h2>
-    <input type="hidden" id="catEditId">
-    <div class="fg">
-      <label>اسم القسم</label>
-      <input type="text" id="catName" placeholder="مثال: beIN sports، الرياضة، الأفلام">
-    </div>
-    <div class="fg">
-      <label>صورة القسم (تظهر في الواجهة الرئيسية)</label>
-      <input type="text" id="catImg" placeholder="https://..." dir="ltr">
-    </div>
-    <button class="btn" onclick="saveCat()" id="catBtn">💾 حفظ القسم</button>
-    <button class="btn btn-gray" onclick="clearCat()" id="catCancel">إلغاء التعديل</button>
-    <div id="catsList" style="margin-top:16px"></div>
+
+    <h2>📁 إنشاء قائمة قنوات</h2>
+
+    <input
+      id="categoryName"
+      placeholder="اسم القائمة - مثال: beIN Sports">
+
+    <input
+      id="categoryImage"
+      placeholder="رابط صورة القائمة">
+
+    <button onclick="addCategory()">
+      إضافة القائمة
+    </button>
+
   </div>
 
-  <!-- 2. إدارة القنوات (داخل قسم) -->
+
+  <!-- إضافة قناة -->
+
   <div class="card">
-    <h2 id="chTitle">➕ إضافة قناة جديدة داخل قسم</h2>
-    <input type="hidden" id="chEditId">
-    <div class="fg">
-      <label>القسم التابع له</label>
-      <select id="chCat"></select>
-    </div>
-    <div class="fg">
-      <label>اسم القناة</label>
-      <input type="text" id="chName" placeholder="مثال: beIN Sports 1">
-    </div>
-    <div class="fg">
-      <label>رابط الصورة (Logo)</label>
-      <input type="text" id="chLogo" placeholder="https://..." dir="ltr">
-    </div>
-    <div class="fg">
-      <label>رابط البث (m3u8 أو ts)</label>
-      <input type="text" id="chUrl" placeholder="http://mag.tiger-ott.net/live/.../1030236.m3u8" dir="ltr">
-    </div>
-    <div class="fg">
-      <label>حالة البث</label>
-      <select id="chStatus">
-        <option value="live">🔴 مباشر الآن</option>
-        <option value="offline">⚫ غير متاح</option>
-      </select>
-    </div>
-    <button class="btn" onclick="saveCh()" id="chBtn">💾 حفظ القناة</button>
-    <button class="btn btn-gray" onclick="clearCh()" id="chCancel">إلغاء التعديل</button>
-    <div id="chList" style="margin-top:16px"></div>
+
+    <h2>📺 إضافة قناة داخل قائمة</h2>
+
+    <select id="categorySelect">
+      <option value="">اختر القائمة</option>
+    </select>
+
+    <input
+      id="channelName"
+      placeholder="اسم القناة - مثال: beIN Sports 1">
+
+    <input
+      id="channelImage"
+      placeholder="رابط صورة القناة">
+
+    <input
+      id="channelUrl"
+      placeholder="رابط البث m3u8 أو الرابط المباشر">
+
+    <button onclick="addChannel()">
+      إضافة القناة
+    </button>
+
   </div>
+
+
+  <!-- القوائم -->
+
+  <div class="card">
+
+    <h2>📁 القوائم الموجودة</h2>
+
+    <div id="categoriesList" class="list"></div>
+
+  </div>
+
+
+  <div class="card">
+
+    <h2>📺 القنوات الموجودة</h2>
+
+    <div id="channelsList"></div>
+
+  </div>
+
+
+  <div class="status" id="status">
+    جاري الاتصال...
+  </div>
+
 </div>
-<div class="toast" id="toast"></div>
 
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getDatabase, ref, push, set, remove, onValue, update }
-  from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyAUc2C9hG9VE7RECiW19QXjNZqVH96sFE",
-  authDomain: "zezo-59a8d.firebaseapp.com",
-  databaseURL: "https://zezo-59a8d-default-rtdb.firebaseio.com",
-  projectId: "zezo-59a8d",
-  storageBucket: "zezo-59a8d.firebasestorage.app",
-  messagingSenderId: "49183098248",
-  appId: "1:49183098248:web:37e3fb16744042a1bb263d"
+<script>
+
+/* =========================================
+   MQTT
+========================================= */
+
+const BROKER =
+  'wss://broker.emqx.io:8084/mqtt';
+
+const TOPIC_DATA =
+  'kwtspta_9f3a2b1c/data';
+
+const TOPIC_CMD =
+  'kwtspta_9f3a2b1c/cmd';
+
+
+let db = {
+  categories: []
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
 
-let DATA = { categories: {} };
-const $ = id => document.getElementById(id);
+let client;
 
-function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2000);}
 
-// تحميل البيانات
-onValue(ref(db, 'categories'), (snap) => {
-  DATA.categories = snap.val() || {};
-  render();
-});
+try{
 
-function render(){ renderCats(); renderCatSelect(); renderChs(); }
+  client = mqtt.connect(
+    BROKER,
+    {
+      clientId:
+        'admin_' +
+        Math.random()
+        .toString(36)
+        .slice(2,10),
 
-function renderCats(){
-  const c = $('catsList');
-  const list = Object.entries(DATA.categories).map(([id, v]) => ({id, ...v}));
-  if(!list.length){ c.innerHTML = '<p style="color:#666;font-size:12px;text-align:center;padding:10px">لا توجد أقسام</p>'; return; }
-  c.innerHTML = list.map(cat => {
-    const count = cat.channels ? Object.keys(cat.channels).length : 0;
-    return `<div class="li">
-      <div class="info">
-        <img src="${cat.image || 'https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'}" onerror="this.src='https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'">
-        <div class="txt"><div class="nm">${cat.name}</div><div class="sb">${count} قناة</div></div>
-      </div>
-      <div class="act"><button class="ed" onclick="editCat('${cat.id}')">تعديل</button><button class="dl" onclick="delCat('${cat.id}')">حذف</button></div>
-    </div>`;
-  }).join('');
-}
-
-function renderCatSelect(){
-  const s = $('chCat');
-  const list = Object.entries(DATA.categories).map(([id, v]) => ({id, ...v}));
-  if(!list.length){ s.innerHTML = '<option value="">-- أضف قسماً أولاً --</option>'; return; }
-  s.innerHTML = list.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
-}
-
-function renderChs(){
-  const c = $('chList');
-  let html = '';
-  Object.entries(DATA.categories).forEach(([catId, cat]) => {
-    if(cat.channels && Object.keys(cat.channels).length > 0){
-      html += `<h4 style="color:#dc1420;font-size:12px;margin:10px 0 5px">${cat.name}</h4>`;
-      html += Object.entries(cat.channels).map(([chId, ch]) => `
-        <div class="li">
-          <div class="info">
-            <img src="${ch.logo || 'https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'}" onerror="this.src='https://marketplace.canva.com/Na9X8/MAHB7PNa9X8/1/tl/canva-spider-web-illustration-MAHB7PNa9X8.png'">
-            <div class="txt"><div class="nm">${ch.name} ${ch.status==='live'?'<span style="color:#dc1420;font-size:10px">● مباشر</span>':''}</div></div>
-          </div>
-          <div class="act"><button class="ed" onclick="editCh('${catId}','${chId}')">تعديل</button><button class="dl" onclick="delCh('${catId}','${chId}')">حذف</button></div>
-        </div>`).join('');
+      reconnectPeriod:3000
     }
+  );
+
+
+  client.on('connect',()=>{
+
+    document.getElementById('status')
+      .textContent =
+      '🟢 متصل بالسيرفر';
+
+    client.subscribe(
+      TOPIC_DATA
+    );
+
   });
-  if(!html) html = '<p style="color:#666;font-size:12px;text-align:center;padding:10px">لا توجد قنوات</p>';
-  c.innerHTML = html;
+
+
+  client.on('reconnect',()=>{
+
+    document.getElementById('status')
+      .textContent =
+      '🟡 جاري إعادة الاتصال...';
+
+  });
+
+
+  client.on('error',()=>{
+
+    document.getElementById('status')
+      .textContent =
+      '🔴 خطأ في الاتصال';
+
+  });
+
+
+  client.on('message',(topic,msg)=>{
+
+    if(topic !== TOPIC_DATA)
+      return;
+
+    try{
+
+      const data =
+        JSON.parse(msg.toString());
+
+      if(
+        data &&
+        Array.isArray(data.categories)
+      ){
+
+        db = data;
+
+        render();
+
+      }
+
+    }
+    catch(e){}
+
+  });
+
+}
+catch(e){}
+
+
+/* =========================================
+   PUBLISH
+========================================= */
+
+function publish(){
+
+  if(!client)
+    return;
+
+  client.publish(
+    TOPIC_DATA,
+    JSON.stringify(db),
+    {
+      qos:1,
+      retain:true
+    }
+  );
+
 }
 
-// حفظ القسم
-window.saveCat = async function(){
-  const name = $('catName').value.trim();
-  const image = $('catImg').value.trim();
-  const id = $('catEditId').value;
-  if(!name){ toast('اكتب اسم القسم'); return; }
-  if(id){
-    await update(ref(db, 'categories/' + id), { name, image });
-    toast('تم التعديل');
-  } else {
-    const newRef = push(ref(db, 'categories'));
-    await set(newRef, { name, image, channels: {} });
-    toast('تمت الإضافة');
+
+/* =========================================
+   ADD CATEGORY
+========================================= */
+
+function addCategory(){
+
+  const name =
+    document.getElementById(
+      'categoryName'
+    ).value.trim();
+
+  const image =
+    document.getElementById(
+      'categoryImage'
+    ).value.trim();
+
+
+  if(!name){
+
+    alert('اكتب اسم القائمة');
+
+    return;
+
   }
-  clearCat(); render();
-};
 
-window.editCat = function(id){
-  const c = DATA.categories[id];
-  if(!c) return;
-  $('catName').value = c.name;
-  $('catImg').value = c.image || '';
-  $('catEditId').value = id;
-  $('catTitle').textContent = '✏️ تعديل القسم';
-  $('catBtn').textContent = '💾 حفظ التعديلات';
-  $('catCancel').style.display = 'block';
-  window.scrollTo({top:0,behavior:'smooth'});
-};
 
-window.delCat = async function(id){
-  const c = DATA.categories[id];
-  if(!c || !confirm(`حذف "${c.name}" وكل قنواته؟`)) return;
-  await remove(ref(db, 'categories/' + id));
-  toast('تم الحذف');
-};
+  const category = {
 
-window.clearCat = function(){
-  $('catName').value = ''; $('catImg').value = ''; $('catEditId').value = '';
-  $('catTitle').textContent = '➕ إضافة قسم جديد';
-  $('catBtn').textContent = '💾 حفظ القسم';
-  $('catCancel').style.display = 'none';
-};
+    id:
+      'cat_' +
+      Date.now(),
 
-// حفظ القناة داخل القسم
-window.saveCh = async function(){
-  const categoryId = $('chCat').value;
-  const name = $('chName').value.trim();
-  const logo = $('chLogo').value.trim();
-  const url = $('chUrl').value.trim();
-  const status = $('chStatus').value;
-  const id = $('chEditId').value;
-  if(!name || !url){ toast('املأ الاسم والرابط'); return; }
-  if(!categoryId){ toast('اختر القسم'); return; }
-  if(id){
-    await update(ref(db, 'categories/' + categoryId + '/channels/' + id), { name, logo, url, status });
-    toast('تم التعديل');
-  } else {
-    const newRef = push(ref(db, 'categories/' + categoryId + '/channels'));
-    await set(newRef, { name, logo, url, status });
-    toast('تمت الإضافة');
+    name:name,
+
+    image:image,
+
+    channels:[]
+
+  };
+
+
+  db.categories.push(
+    category
+  );
+
+
+  publish();
+
+
+  document.getElementById(
+    'categoryName'
+  ).value='';
+
+  document.getElementById(
+    'categoryImage'
+  ).value='';
+
+
+  render();
+
+}
+
+
+/* =========================================
+   ADD CHANNEL
+========================================= */
+
+function addChannel(){
+
+  const categoryId =
+    document.getElementById(
+      'categorySelect'
+    ).value;
+
+  const name =
+    document.getElementById(
+      'channelName'
+    ).value.trim();
+
+  const image =
+    document.getElementById(
+      'channelImage'
+    ).value.trim();
+
+  const url =
+    document.getElementById(
+      'channelUrl'
+    ).value.trim();
+
+
+  if(!categoryId){
+
+    alert('اختر القائمة');
+
+    return;
+
   }
-  clearCh(); render();
-};
 
-window.editCh = function(catId, chId){
-  const ch = DATA.categories[catId].channels[chId];
-  if(!ch) return;
-  $('chCat').value = catId;
-  $('chName').value = ch.name;
-  $('chLogo').value = ch.logo || '';
-  $('chUrl').value = ch.url;
-  $('chStatus').value = ch.status;
-  $('chEditId').value = chId;
-  $('chTitle').textContent = '✏️ تعديل القناة';
-  $('chBtn').textContent = '💾 حفظ التعديلات';
-  $('chCancel').style.display = 'block';
-  window.scrollTo({top:0,behavior:'smooth'});
-};
 
-window.delCh = async function(catId, chId){
-  if(!confirm('حذف القناة؟')) return;
-  await remove(ref(db, 'categories/' + catId + '/channels/' + chId));
-  toast('تم الحذف');
-};
+  if(!name){
 
-window.clearCh = function(){
-  $('chName').value = ''; $('chLogo').value = ''; $('chUrl').value = '';
-  $('chStatus').value = 'live'; $('chEditId').value = '';
-  $('chTitle').textContent = '➕ إضافة قناة جديدة داخل قسم';
-  $('chBtn').textContent = '💾 حفظ القناة';
-  $('chCancel').style.display = 'none';
-};
+    alert('اكتب اسم القناة');
+
+    return;
+
+  }
+
+
+  if(!url){
+
+    alert('ضع رابط البث');
+
+    return;
+
+  }
+
+
+  const category =
+    db.categories.find(
+      x => x.id === categoryId
+    );
+
+
+  if(!category)
+    return;
+
+
+  category.channels.push({
+
+    id:
+      'ch_' +
+      Date.now(),
+
+    name:name,
+
+    image:image,
+
+    url:url,
+
+    live:true
+
+  });
+
+
+  publish();
+
+
+  document.getElementById(
+    'channelName'
+  ).value='';
+
+  document.getElementById(
+    'channelImage'
+  ).value='';
+
+  document.getElementById(
+    'channelUrl'
+  ).value='';
+
+
+  render();
+
+}
+
+
+/* =========================================
+   DELETE CATEGORY
+========================================= */
+
+function deleteCategory(id){
+
+  if(
+    !confirm(
+      'حذف القائمة وكل القنوات الموجودة بداخلها؟'
+    )
+  )
+    return;
+
+
+  db.categories =
+    db.categories.filter(
+      x => x.id !== id
+    );
+
+
+  publish();
+
+  render();
+
+}
+
+
+/* =========================================
+   DELETE CHANNEL
+========================================= */
+
+function deleteChannel(
+  categoryId,
+  channelId
+){
+
+  const category =
+    db.categories.find(
+      x => x.id === categoryId
+    );
+
+
+  if(!category)
+    return;
+
+
+  category.channels =
+    category.channels.filter(
+      x => x.id !== channelId
+    );
+
+
+  publish();
+
+  render();
+
+}
+
+
+/* =========================================
+   RENDER
+========================================= */
+
+function render(){
+
+  const select =
+    document.getElementById(
+      'categorySelect'
+    );
+
+
+  select.innerHTML =
+    '<option value="">اختر القائمة</option>';
+
+
+  db.categories.forEach(c=>{
+
+    select.innerHTML += `
+      <option value="${escapeAttr(c.id)}">
+        ${escapeHTML(c.name)}
+      </option>
+    `;
+
+  });
+
+
+  const categoriesList =
+    document.getElementById(
+      'categoriesList'
+    );
+
+
+  if(!db.categories.length){
+
+    categoriesList.innerHTML =
+      '<div style="color:#888">لا توجد قوائم</div>';
+
+  }
+  else{
+
+    categoriesList.innerHTML =
+      db.categories.map(c=>`
+
+        <div class="item">
+
+          ${
+            c.image
+            ?
+            `<img src="${escapeAttr(c.image)}">`
+            :
+            ''
+          }
+
+          <strong>
+            ${escapeHTML(c.name)}
+          </strong>
+
+          <small>
+            ${c.channels.length} قناة
+          </small>
+
+          <button
+            class="delete"
+            onclick="deleteCategory('${escapeAttr(c.id)}')">
+
+            حذف القائمة
+
+          </button>
+
+        </div>
+
+      `).join('');
+
+  }
+
+
+  const channelsList =
+    document.getElementById(
+      'channelsList'
+    );
+
+
+  let html='';
+
+
+  db.categories.forEach(c=>{
+
+    if(!c.channels.length)
+      return;
+
+
+    html += `
+      <div style="
+        color:#ff4757;
+        font-weight:900;
+        margin:15px 0 10px;
+      ">
+        📁 ${escapeHTML(c.name)}
+      </div>
+    `;
+
+
+    c.channels.forEach(ch=>{
+
+      html += `
+
+        <div class="item"
+          style="margin-bottom:10px">
+
+          ${
+            ch.image
+            ?
+            `<img src="${escapeAttr(ch.image)}">`
+            :
+            ''
+          }
+
+          <strong>
+            ${escapeHTML(ch.name)}
+          </strong>
+
+          <small>
+            ${escapeHTML(ch.url)}
+          </small>
+
+          <button
+            class="delete"
+            onclick="
+              deleteChannel(
+                '${escapeAttr(c.id)}',
+                '${escapeAttr(ch.id)}'
+              )
+            ">
+
+            حذف القناة
+
+          </button>
+
+        </div>
+
+      `;
+
+    });
+
+  });
+
+
+  channelsList.innerHTML =
+    html ||
+    '<div style="color:#888">لا توجد قنوات</div>';
+
+}
+
+
+/* =========================================
+   SAFE HTML
+========================================= */
+
+function escapeHTML(v){
+
+  return String(v ?? '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#039;');
+
+}
+
+
+function escapeAttr(v){
+
+  return escapeHTML(v);
+
+}
+
+
+/* =========================================
+   START
+========================================= */
+
+render();
+
 </script>
+
 </body>
 </html>
